@@ -1,0 +1,136 @@
+name: GraalVM Native Image builds
+
+#on: [push, pull_request] # push 和 pull_request 时会触发
+on:
+  workflow_dispatch:  # 手动触发
+    inputs:
+      buildStatic:
+        description: 'Build Static File'
+        type: boolean
+        default: true
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: zfile-pro.exe
+            folder_name: zfile-pro-windows-amd64
+            compress_name: zfile-pro-windows-amd64.zip
+
+          - os: ubuntu-latest
+            artifact_name: zfile-pro
+            folder_name: zfile-pro-linux-amd64
+            compress_name: zfile-pro-linux-amd64.tar.gz
+
+    steps:
+      - name: Checkout ZFile Pro
+        uses: actions/checkout@v4
+        with:
+          repository: zfile-dev/zfile-pro
+          token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+          path: .
+
+      - name: Checkout ZFile Pro Vue
+        uses: actions/checkout@v4
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        with:
+          repository: zfile-dev/zfile-vue-pro
+          token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+          path: zfile-vue-pro
+
+      - name: Setup Node 18
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Build ZFile Vue Pro
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        run: |
+          cd zfile-vue-pro
+          npm install -g pnpm
+          node -v
+          pnpm -v
+          pnpm install --no-frozen-lockfile
+          pnpm run build
+
+      - name: Copy ZFile Vue Pro Static
+        if: ${{ github.event.inputs.buildStatic == 'true' && runner.os != 'Windows'}}
+        run: |
+          rm -rf src/main/resources/static
+          sed -i 's|"baseUrl": ".*"|"baseUrl": ""|' zfile-vue-pro/dist/zfile.config.json
+          cp -r zfile-vue-pro/dist src/main/resources/static
+
+      - name: Copy ZFile Vue Pro Static Windows
+        if: ${{ github.event.inputs.buildStatic == 'true' && runner.os == 'Windows'}}
+        run: |
+          Remove-Item -Recurse -Force src\main\resources\static
+          (Get-Content zfile-vue-pro\dist\zfile.config.json) -replace '"baseUrl": ".*"', '"baseUrl": ""' | Set-Content zfile-vue-pro\dist\zfile.config.json
+          Copy-Item -Recurse zfile-vue-pro\dist src\main\resources\static
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '22'
+          distribution: 'liberica'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+          cache: 'maven'
+
+      - name: Cache local Maven repository
+        uses: useblacksmith/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Example step
+        run: |
+          echo "GRAALVM_HOME: $GRAALVM_HOME"
+          echo "JAVA_HOME: $JAVA_HOME"
+          java --version
+          native-image --version
+
+      #      - name: set memory
+      #        if: runner.os == 'Linux' && runner.arch == 'ARM64'
+      #        run: |
+      #          echo " -J-Xmx6g" >> src/main/resources/META-INF/native-image/native-image.properties
+
+      - name: Example step using Maven plugin
+        run: |
+          mvn -Pnative package
+
+      - name: compress windows artifact
+        if: runner.os == 'Windows'
+        run: |
+          mkdir -p ${{ matrix.folder_name }}
+          mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
+          mv target/*.dll ${{ matrix.folder_name }}/
+          7z a -tzip ${{ matrix.compress_name }} ${{ matrix.folder_name }}
+
+      - name: compress linux artifact
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p ${{ matrix.folder_name }}
+          mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
+          mv target/*.so ${{ matrix.folder_name }}/
+          tar -czvf ${{ matrix.compress_name }} ${{ matrix.folder_name }}
+
+      - name: Upload Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.compress_name }}
+          overwrite: true
+          prerelease: true
+          body: |
+            **ZFile Pro 自动构建**
