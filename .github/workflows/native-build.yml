@@ -31,7 +31,7 @@ jobs:
             artifact_name: zfile-pro
             folder_name: zfile-pro-linux-amd64
             compress_name: zfile-pro-linux-amd64.tar.gz
-            static: false
+            static: true
 
     steps:
       - name: Setup GCC
@@ -117,7 +117,7 @@ jobs:
       - name: set static
         if: ${{ runner.os == 'Linux' && matrix.static }}
         run: |
-          echo " --static --libc=musl" >> src/main/resources/META-INF/native-image/native-image.properties
+          echo " --static" >> src/main/resources/META-INF/native-image/native-image.properties
 
       - name: Example step using Maven plugin
         run: |
