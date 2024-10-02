@@ -38,6 +38,7 @@ jobs:
         if: runner.os != 'Windows'
         id: polyfill
         run: |
+          apt-get install ninja-build -y
           git clone https://github.com/corsix/polyfill-glibc.git
           cd polyfill-glibc
           ninja polyfill-glibc
