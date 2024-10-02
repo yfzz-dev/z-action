@@ -136,6 +136,7 @@ jobs:
         run: |
           mkdir -p ${{ matrix.folder_name }}
           mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
+            mv target/*.so ${{ matrix.folder_name }}/
           tar -czvf ${{ matrix.compress_name }} ${{ matrix.folder_name }}
 
       - name: Upload Release
