@@ -32,6 +32,15 @@ jobs:
             compress_name: zfile-pro-linux-amd64.tar.gz
 
     steps:
+      - name: Setup GCC
+        uses: egor-tensin/setup-gcc@v1
+        with:
+          version: '9'  # 指定所需的 GCC 版本
+
+      - name: Verify GCC version
+        run: |
+          gcc --version
+          
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
         with:
@@ -104,7 +113,7 @@ jobs:
       - name: set static
         if: runner.os == 'Linux'
         run: |
-          echo " --static-nolibc" >> src/main/resources/META-INF/native-image/native-image.properties
+          echo " --static --libc=musl" >> src/main/resources/META-INF/native-image/native-image.properties
 
       - name: Example step using Maven plugin
         run: |
