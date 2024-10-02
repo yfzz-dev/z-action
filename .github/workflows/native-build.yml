@@ -21,10 +21,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: windows-latest
-            artifact_name: zfile-pro.exe
-            folder_name: zfile-pro-windows-amd64
-            compress_name: zfile-pro-windows-amd64.zip
+          # - os: windows-latest
+          #   artifact_name: zfile-pro.exe
+          #   folder_name: zfile-pro-windows-amd64
+          #   compress_name: zfile-pro-windows-amd64.zip
 
           - os: ubuntu-latest
             artifact_name: zfile-pro
@@ -122,8 +122,8 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           mkdir -p ${{ matrix.folder_name }}
+          ls -lha target
           mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
-          mv target/*.so ${{ matrix.folder_name }}/
           tar -czvf ${{ matrix.compress_name }} ${{ matrix.folder_name }}
 
       - name: Upload Release
