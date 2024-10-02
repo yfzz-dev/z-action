@@ -31,7 +31,7 @@ jobs:
             artifact_name: zfile-pro
             folder_name: zfile-pro-linux-amd64
             compress_name: zfile-pro-linux-amd64.tar.gz
-            static: true
+            static: false
 
     steps:
       - name: Setup GCC
@@ -136,7 +136,7 @@ jobs:
         run: |
           mkdir -p ${{ matrix.folder_name }}
           mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
-          if [ "${{ matrix.static }}" == "true" ]; then
+          if [ "${{ matrix.static }}" == "false" ]; then
             mv target/*.so ${{ matrix.folder_name }}/
           fi
           tar -czvf ${{ matrix.compress_name }} ${{ matrix.folder_name }}
