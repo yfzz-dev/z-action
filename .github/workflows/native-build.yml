@@ -124,10 +124,11 @@ jobs:
 
       - name: Patch glibc for backwards compatibility
         uses: lmangani/polyfill-glibc-action@main
+        if: runner.os != 'Windows'
         id: polyfill
         with:
           glibc: "2.32"
-          target: "/path/to/binary"
+          target: "target/${{ matrix.artifact_name }}"
 
       - name: compress windows artifact
         if: runner.os == 'Windows'
