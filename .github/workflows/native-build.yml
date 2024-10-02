@@ -38,11 +38,13 @@ jobs:
         if: runner.os != 'Windows'
         id: polyfill
         run: |
+          pwd
           sudo apt-get install ninja-build -y
           git clone https://github.com/corsix/polyfill-glibc.git
           cd polyfill-glibc
           ninja polyfill-glibc
           ls -lha
+          pwd
 
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
@@ -98,7 +100,8 @@ jobs:
           cache: 'maven'
 
       - name: Cache local Maven repository
-        uses: useblacksmith/cache@v5
+#        uses: useblacksmith/cache@v5
+        uses: actions/cache@v4
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -132,6 +135,8 @@ jobs:
       - name: Patch glibc for backwards compatibility
         if: runner.os != 'Windows'
         run: |
+          ls -lha
+          pwd
           polyfill-glibc/polyfill-glibc --target-glibc=2.17  --print-imports target/${{ matrix.artifact_name }}
 
       - name: compress linux artifact
