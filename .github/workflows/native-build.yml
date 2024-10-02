@@ -114,10 +114,10 @@ jobs:
           java --version
           native-image --version
 
-      - name: set static
-        if: runner.os == 'Linux'
-        run: |
-          echo " --static --libc=musl" >> src/main/resources/META-INF/native-image/native-image.properties
+      #- name: set static
+      #  if: runner.os == 'Linux'
+      #  run: |
+      #    echo " --static --libc=musl" >> src/main/resources/META-INF/native-image/native-image.properties
 
       - name: Example step using Maven plugin
         run: |
