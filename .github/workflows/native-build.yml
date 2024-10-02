@@ -34,18 +34,6 @@ jobs:
             static: false
 
     steps:
-      - name: Install polyfill-glibc
-        if: runner.os != 'Windows'
-        id: polyfill
-        run: |
-          pwd
-          sudo apt-get install ninja-build -y
-          git clone https://github.com/corsix/polyfill-glibc.git
-          cd polyfill-glibc
-          ninja polyfill-glibc
-          ls -lha
-          pwd
-
       - name: Patch glibc for backwards compatibility
         if: runner.os != 'Windows'
         run: |
@@ -141,9 +129,11 @@ jobs:
       - name: Patch glibc for backwards compatibility
         if: runner.os != 'Windows'
         run: |
-          ls -lha
-          pwd
-          ./polyfill-glibc/polyfill-glibc --target-glibc=2.17  --print-imports target/${{ matrix.artifact_name }}
+          sudo apt-get install ninja-build -y
+          git clone https://github.com/corsix/polyfill-glibc.git
+          cd polyfill-glibc
+          ninja polyfill-glibc
+          ./polyfill-glibc --target-glibc=2.17  --print-imports ../target/${{ matrix.artifact_name }}
 
       - name: compress linux artifact
         if: runner.os != 'Windows'
