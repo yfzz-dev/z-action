@@ -36,10 +36,12 @@ jobs:
     steps:
       - name: Setup GCC
         uses: egor-tensin/setup-gcc@v1
+        if: runner.os != 'Windows'
         with:
           version: '9'  # 指定所需的 GCC 版本
 
       - name: Verify GCC version
+        if: runner.os != 'Windows'
         run: |
           gcc --version
 
