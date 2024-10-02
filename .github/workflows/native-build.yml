@@ -30,8 +30,15 @@ jobs:
             artifact_name: zfile-pro
             folder_name: zfile-pro-linux-amd64
             compress_name: zfile-pro-linux-amd64.tar.gz
+            gcc: 8
 
     steps:
+      - name: Configure using CMake (!Windows)
+        env:
+          CC: gcc-${{ matrix.gcc }}
+          CXX: g++-${{ matrix.gcc }}
+        if: runner.os != 'Windows'
+        
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
         with:
@@ -82,7 +89,7 @@ jobs:
           java-version: '22'
           distribution: 'liberica'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          native-image-musl: ${{ runner.os != 'Windows'}}
+          # native-image-musl: ${{ runner.os != 'Windows'}}
           native-image-job-reports: 'true'
           cache: 'maven'
 
@@ -122,8 +129,8 @@ jobs:
         if: runner.os != 'Windows'
         run: |
           mkdir -p ${{ matrix.folder_name }}
-          ls -lha target
           mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
+          mv target/*.so ${{ matrix.folder_name }}/
           tar -czvf ${{ matrix.compress_name }} ${{ matrix.folder_name }}
 
       - name: Upload Release
