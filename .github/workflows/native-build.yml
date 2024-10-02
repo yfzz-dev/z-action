@@ -82,6 +82,7 @@ jobs:
           java-version: '22'
           distribution: 'liberica'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-musl: 'true'
           native-image-job-reports: 'true'
           cache: 'maven'
 
