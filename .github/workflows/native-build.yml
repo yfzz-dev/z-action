@@ -46,6 +46,12 @@ jobs:
           ls -lha
           pwd
 
+      - name: Patch glibc for backwards compatibility
+        if: runner.os != 'Windows'
+        run: |
+          ls -lha
+          pwd
+
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
         with:
@@ -137,7 +143,7 @@ jobs:
         run: |
           ls -lha
           pwd
-          polyfill-glibc/polyfill-glibc --target-glibc=2.17  --print-imports target/${{ matrix.artifact_name }}
+          ./polyfill-glibc/polyfill-glibc --target-glibc=2.17  --print-imports target/${{ matrix.artifact_name }}
 
       - name: compress linux artifact
         if: runner.os != 'Windows'
