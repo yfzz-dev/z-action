@@ -34,11 +34,14 @@ jobs:
             static: false
 
     steps:
-      - name: Verify GCC version
+      - name: Install polyfill-glibc
         if: runner.os != 'Windows'
+        id: polyfill
         run: |
-          gcc --version
-          ldd --version
+          git clone https://github.com/corsix/polyfill-glibc.git
+          cd polyfill-glibc
+          ninja polyfill-glibc
+          ls -lha
 
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
@@ -124,15 +127,12 @@ jobs:
           mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
           mv target/*.dll ${{ matrix.folder_name }}/
           7z a -tzip ${{ matrix.compress_name }} ${{ matrix.folder_name }}
-          
+
       - name: Patch glibc for backwards compatibility
-        uses: lmangani/polyfill-glibc-action@main
         if: runner.os != 'Windows'
-        id: polyfill
-        with:
-          glibc: "2.17"
-          target: "target/${{ matrix.artifact_name }}"
-          
+        run: |
+          polyfill-glibc/polyfill-glibc --target-glibc=2.17  --print-imports target/${{ matrix.artifact_name }}
+
       - name: compress linux artifact
         if: runner.os != 'Windows'
         run: |
