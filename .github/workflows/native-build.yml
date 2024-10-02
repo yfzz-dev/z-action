@@ -30,15 +30,8 @@ jobs:
             artifact_name: zfile-pro
             folder_name: zfile-pro-linux-amd64
             compress_name: zfile-pro-linux-amd64.tar.gz
-            gcc: 8
 
     steps:
-      - name: Configure using CMake (!Windows)
-        env:
-          CC: gcc-${{ matrix.gcc }}
-          CXX: g++-${{ matrix.gcc }}
-        if: runner.os != 'Windows'
-        run: gcc -v
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
         with:
@@ -89,7 +82,7 @@ jobs:
           java-version: '22'
           distribution: 'liberica'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          # native-image-musl: ${{ runner.os != 'Windows'}}
+          native-image-musl: ${{ runner.os != 'Windows'}}
           native-image-job-reports: 'true'
           cache: 'maven'
 
@@ -108,10 +101,10 @@ jobs:
           java --version
           native-image --version
 
-      #      - name: set memory
-      #        if: runner.os == 'Linux' && runner.arch == 'ARM64'
-      #        run: |
-      #          echo " -J-Xmx6g" >> src/main/resources/META-INF/native-image/native-image.properties
+      - name: set static
+        if: runner.os == 'Linux'
+        run: |
+          echo " --static-nolibc" >> src/main/resources/META-INF/native-image/native-image.properties
 
       - name: Example step using Maven plugin
         run: |
