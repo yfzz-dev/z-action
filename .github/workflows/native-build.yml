@@ -21,10 +21,10 @@ jobs:
     strategy:
       matrix:
         include:
-          # - os: windows-latest
-          #   artifact_name: zfile-pro.exe
-          #   folder_name: zfile-pro-windows-amd64
-          #   compress_name: zfile-pro-windows-amd64.zip
+          - os: windows-latest
+            artifact_name: zfile-pro.exe
+            folder_name: zfile-pro-windows-amd64
+            compress_name: zfile-pro-windows-amd64.zip
 
           - os: ubuntu-latest
             artifact_name: zfile-pro
@@ -82,7 +82,7 @@ jobs:
           java-version: '22'
           distribution: 'liberica'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          native-image-musl: 'true'
+          native-image-musl: ${{ runner.os != 'Windows'}}
           native-image-job-reports: 'true'
           cache: 'maven'
 
