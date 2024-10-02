@@ -21,11 +21,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - os: windows-latest
-            artifact_name: zfile-pro.exe
-            folder_name: zfile-pro-windows-amd64
-            compress_name: zfile-pro-windows-amd64.zip
-            static: false
+          #- os: windows-latest
+          #  artifact_name: zfile-pro.exe
+          #  folder_name: zfile-pro-windows-amd64
+          #  compress_name: zfile-pro-windows-amd64.zip
+          #  static: false
 
           - os: ubuntu-latest
             artifact_name: zfile-pro
@@ -38,7 +38,7 @@ jobs:
         if: runner.os != 'Windows'
         id: polyfill
         run: |
-          apt-get install ninja-build -y
+          sudo apt-get install ninja-build -y
           git clone https://github.com/corsix/polyfill-glibc.git
           cd polyfill-glibc
           ninja polyfill-glibc
