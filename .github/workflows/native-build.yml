@@ -95,7 +95,7 @@ jobs:
           java-version: '22'
           distribution: 'liberica'
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          native-image-musl: /${{ matrix.static }}
+          native-image-musl: ${{ matrix.static }}
           native-image-job-reports: 'true'
           cache: 'maven'
 
@@ -114,10 +114,10 @@ jobs:
           java --version
           native-image --version
 
-      #- name: set static
-      #  if: runner.os == 'Linux'
-      #  run: |
-      #    echo " --static --libc=musl" >> src/main/resources/META-INF/native-image/native-image.properties
+      - name: set static
+        if: ${{ runner.os == 'Linux' && matrix.static }}
+        run: |
+          echo " --static --libc=musl" >> src/main/resources/META-INF/native-image/native-image.properties
 
       - name: Example step using Maven plugin
         run: |
@@ -136,7 +136,9 @@ jobs:
         run: |
           mkdir -p ${{ matrix.folder_name }}
           mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
+          if [ "${{ matrix.static }}" == "true" ]; then
             mv target/*.so ${{ matrix.folder_name }}/
+          fi
           tar -czvf ${{ matrix.compress_name }} ${{ matrix.folder_name }}
 
       - name: Upload Release
