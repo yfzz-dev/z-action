@@ -38,7 +38,7 @@ jobs:
           CC: gcc-${{ matrix.gcc }}
           CXX: g++-${{ matrix.gcc }}
         if: runner.os != 'Windows'
-        run: cmake . ${{ matrix.config }}
+        run: gcc -v
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
         with:
