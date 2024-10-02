@@ -31,7 +31,7 @@ jobs:
             artifact_name: zfile-pro
             folder_name: zfile-pro-linux-amd64
             compress_name: zfile-pro-linux-amd64.tar.gz
-            static: true
+            static: false
 
     steps:
       - name: Setup GCC
@@ -121,6 +121,13 @@ jobs:
       - name: Example step using Maven plugin
         run: |
           mvn -Pnative package
+
+      - name: Patch glibc for backwards compatibility
+        uses: lmangani/polyfill-glibc-action@main
+        id: polyfill
+        with:
+          glibc: "2.32"
+          target: "/path/to/binary"
 
       - name: compress windows artifact
         if: runner.os == 'Windows'
