@@ -1,0 +1,73 @@
+name: test job
+
+#on: [push, pull_request] # push 和 pull_request 时会触发
+on:
+  workflow_dispatch:  # 手动触发
+    inputs:
+      buildStatic:
+        description: 'Build Static File'
+        type: boolean
+        default: true
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    continue-on-error: false
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: zfile-pro.exe
+            folder_name: zfile-pro-windows-amd64
+            compress_name: zfile-pro-windows-amd64.zip
+            static: false
+
+          - os: ubuntu-latest
+            artifact_name: zfile-pro
+            folder_name: zfile-pro-linux-amd64
+            compress_name: zfile-pro-linux-amd64.tar.gz
+            static: false
+
+    steps:
+      - name: Generate File1
+        if: runner.os != 'Windows'
+        run: |
+          echo "Hello World" > ${{ matrix.compress_name }}
+
+      - name: Generate File2
+        if: runner.os == 'Windows'
+        run: |
+          echo "Hello World" > ${{ matrix.compress_name }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: zfile-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
+          path: ${{ matrix.compress_name }}
+
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Download artifacts1
+        uses: actions/download-artifact@v3
+        with:
+          name: zfile-Windows-x64-${{ github.run_id }}
+          path: zfile-win
+      - name: Download artifacts2
+        uses: actions/download-artifact@v3
+        with:
+          name: zfile-Linux-x64-${{ github.run_id }}
+          path: zfile-linux
+      - name: List files
+        run: |
+          pwd
+          ls -lha
+          ls -lha zfile-win
+          ls -lha zfile-linux
