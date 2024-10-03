@@ -21,11 +21,11 @@ jobs:
     strategy:
       matrix:
         include:
-          #- os: windows-latest
-          #  artifact_name: zfile-pro.exe
-          #  folder_name: zfile-pro-windows-amd64
-          #  compress_name: zfile-pro-windows-amd64.zip
-          #  static: false
+          - os: windows-latest
+            artifact_name: zfile-pro.exe
+            folder_name: zfile-pro-windows-amd64
+            compress_name: zfile-pro-windows-amd64.zip
+            static: false
 
           - os: ubuntu-latest
             artifact_name: zfile-pro
@@ -34,12 +34,6 @@ jobs:
             static: false
 
     steps:
-      - name: Patch glibc for backwards compatibility
-        if: runner.os != 'Windows'
-        run: |
-          ls -lha
-          pwd
-
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
         with:
@@ -91,10 +85,10 @@ jobs:
           distribution: 'liberica'
           github-token: ${{ secrets.GITHUB_TOKEN }}
           native-image-job-reports: 'true'
-          cache: 'maven'
+#          cache: 'maven'
 
       - name: Cache local Maven repository
-#        uses: useblacksmith/cache@v5
+        #        uses: useblacksmith/cache@v5
         uses: actions/cache@v4
         with:
           path: ~/.m2/repository
@@ -150,6 +144,7 @@ jobs:
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ matrix.compress_name }}
+          tag: ${{ github.run_id }}
           overwrite: true
           prerelease: true
           body: |
