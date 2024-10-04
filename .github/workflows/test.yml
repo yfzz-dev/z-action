@@ -67,7 +67,7 @@ jobs:
         with:
           path: zfile-artifacts
           pattern: zfile-*
-          merge-multiple: true
+          merge-multiple: false
       - name: List files
         run: |
           pwd
