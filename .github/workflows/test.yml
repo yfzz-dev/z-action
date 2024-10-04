@@ -27,12 +27,12 @@ jobs:
             compress_name: zfile-pro-linux-amd64.tar.gz
             static: false
     steps:
-      - name: Create a File
+      - name: Generate File1
         run: echo "hello from ${{ matrix.os }}" > ${{ matrix.compress_name }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: my-artifact-${{ matrix.os }}
+          name: zfile-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
           path: ${{ matrix.compress_name }}
   download:
     needs: build
@@ -41,7 +41,12 @@ jobs:
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: my-artifact
-          pattern: my-artifact-*
+          path: zfile-artifacts
+          pattern: zfile-*
           merge-multiple: true
-      - run: ls -R my-artifact
+      - name: List files
+        run: |
+          pwd
+          ls -lha
+          ls -lha zfile-artifacts
+          ls -R zfile-artifacts
