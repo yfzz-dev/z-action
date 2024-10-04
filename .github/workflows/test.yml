@@ -3,67 +3,32 @@ name: test job
 #on: [push, pull_request] # push 和 pull_request 时会触发
 on:
   workflow_dispatch:  # 手动触发
-    inputs:
-      buildStatic:
-        description: 'Build Static File'
-        type: boolean
-        default: true
-        required: false
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
-    runs-on: ${{ matrix.os }}
-    continue-on-error: false
+  upload:
     strategy:
       matrix:
-        include:
-          - os: windows-latest
-            artifact_name: zfile-pro.exe
-            folder_name: zfile-pro-windows-amd64
-            compress_name: zfile-pro-windows-amd64.zip
-            static: false
-
-          - os: ubuntu-latest
-            artifact_name: zfile-pro
-            folder_name: zfile-pro-linux-amd64
-            compress_name: zfile-pro-linux-amd64.tar.gz
-            static: false
-
+        runs-on: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.runs-on }}
     steps:
-      - name: Generate File1
-        if: runner.os != 'Windows'
-        run: |
-          echo "Hello World" > ${{ matrix.compress_name }}
-
-      - name: Generate File2
-        if: runner.os == 'Windows'
-        run: |
-          echo "Hello World" > ${{ matrix.compress_name }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+      - name: Create a File
+        run: echo "hello from ${{ matrix.runs-on }}" > file-${{ matrix.runs-on }}.txt
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
         with:
-          name: zfile-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
-          path: ${{ matrix.compress_name }}
-
-  build-docker:
-    name: Build Docker Image
+          name: my-artifact-${{ matrix.runs-on }}
+          path: file-${{ matrix.runs-on }}.txt
+  download:
+    needs: upload
     runs-on: ubuntu-latest
-    needs: build
     steps:
-      - name: Download artifacts2
+      - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
-          path: zfile-artifacts
-          pattern: zfile-*
+          path: my-artifact
+          pattern: my-artifact-*
           merge-multiple: true
-      - name: List files
-        run: |
-          pwd
-          ls -lha
-          ls -lha zfile-artifacts
-          ls -R zfile-artifacts
+      - run: ls -R my-artifact
