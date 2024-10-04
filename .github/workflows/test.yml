@@ -54,7 +54,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: zfile-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
+          name: ${{ matrix.folder_name }}
           path: ${{ matrix.folder_name }}
 
   build-docker:
