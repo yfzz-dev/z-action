@@ -35,7 +35,7 @@ jobs:
           name: my-artifact-${{ matrix.runs-on }}
           path: file-${{ matrix.runs-on }}.txt
   download:
-    needs: upload
+    needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download All Artifacts
