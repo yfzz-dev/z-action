@@ -57,9 +57,13 @@ jobs:
     steps:
       - name: Download artifacts2
         uses: actions/download-artifact@v4
+        with:
+          path: zfile-artifacts
+          pattern: zfile-*
+          merge-multiple: true
       - name: List files
         run: |
           pwd
           ls -lha
-          ls -lha zfile-win
-          ls -lha zfile-linux
+          ls -lha zfile-artifacts
+          ls -R zfile-artifacts
