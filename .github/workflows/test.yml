@@ -56,15 +56,7 @@ jobs:
     needs: build
     steps:
       - name: Download artifacts2
-        uses: actions/download-artifact@v3
-        with:
-          name: zfile-Linux-x64-${{ github.run_id }}
-          path: zfile-linux
-      - name: Download artifacts1
-        uses: actions/download-artifact@v3
-        with:
-          name: zfile-Windows-x64-${{ github.run_id }}
-          path: zfile-win
+        uses: actions/download-artifact@v4
       - name: List files
         run: |
           pwd
