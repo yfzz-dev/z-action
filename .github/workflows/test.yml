@@ -35,25 +35,36 @@ jobs:
 
     steps:
       - name: Generate File1
-        if: runner.os != 'Windows'
         run: |
-          echo "Hello World" > ${{ matrix.compress_name }}
-      - name: Generate File2
+          mkdir -p ${{ matrix.folder_name }}
+          echo "Hello World" > target/${{ matrix.artifact_name }}
+
+      - name: Generate File1
         if: runner.os == 'Windows'
         run: |
-          echo "Hello World" > ${{ matrix.compress_name }}
+          echo "Hello World123" > target/a.dll
+          echo "Hello World345" > target/b.dll
+
+      - name: Generate File1
+        if: runner.os != 'Windows'
+        run: |
+          echo "HelloWorld123" > target/a.so
+          echo "HelloWorld345" > target/b.so
+
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: zfile-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
-          path: ${{ matrix.compress_name }}
+          path: |
+            target/${{ matrix.artifact_name }}
+            target/${{ runner.os == 'Windows' && '*.dll' || '*.so' }}
 
   build-docker:
     name: Build Docker Image
     runs-on: ubuntu-latest
     needs: build
     steps:
-      - name: Download artifacts2
+      - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
           path: zfile-artifacts
