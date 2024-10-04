@@ -28,17 +28,26 @@ jobs:
             static: false
     steps:
       - name: Generate File1
-        run: echo "hello from ${{ matrix.os }}" > ${{ matrix.compress_name }}
+        if: runner.os != 'Windows'
+        run: |
+          echo "Hello World" > ${{ matrix.compress_name }}
+
+      - name: Generate File2
+        if: runner.os == 'Windows'
+        run: |
+          echo "Hello World" > ${{ matrix.compress_name }}
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: zfile-${{ runner.os }}-${{ runner.arch }}-${{ github.run_id }}
           path: ${{ matrix.compress_name }}
   download:
-    needs: build
+    name: Build Docker Image
     runs-on: ubuntu-latest
+    needs: build
     steps:
-      - name: Download All Artifacts
+      - name: Download artifacts2
         uses: actions/download-artifact@v4
         with:
           path: zfile-artifacts
