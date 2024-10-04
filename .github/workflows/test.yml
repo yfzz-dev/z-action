@@ -28,12 +28,12 @@ jobs:
             static: false
     steps:
       - name: Create a File
-        run: echo "hello from ${{ matrix.runs-on }}" > file-${{ matrix.runs-on }}.txt
+        run: echo "hello from ${{ matrix.os }}" > ${{ matrix.compress_name }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: my-artifact-${{ matrix.runs-on }}
-          path: file-${{ matrix.runs-on }}.txt
+          name: my-artifact-${{ matrix.os }}
+          path: ${{ matrix.compress_name }}
   download:
     needs: build
     runs-on: ubuntu-latest
