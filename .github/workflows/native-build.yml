@@ -9,14 +9,69 @@ on:
         type: boolean
         default: true
         required: false
+      buildOnWinAndMac:
+        description: '在 Windows 和 Mac 上构建'
+        type: boolean
+        default: true
+        required: false
+      buildOnLinux:
+        description: '在 Linux 构建'
+        type: boolean
+        default: true
+        required: false
+      pushDocker:
+        description: 'Push Docker Register'
+        type: boolean
+        default: true
+        required: false
+      tag:
+        description: 'Force Docker Tag'
+        type: string
+        required: false
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build on ${{ matrix.os }}
+  build-front:
+    name: Build Front
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ZFile Vue Pro
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        uses: actions/checkout@v4
+        with:
+          repository: zfile-dev/zfile-vue-pro
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup Node 18
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        uses: useblacksmith/setup-node@v5
+        with:
+          node-version: '18'
+
+      - name: Build ZFile Vue Pro
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        run: |
+          npm install -g pnpm
+          node -v
+          pnpm -v
+          pnpm install --no-frozen-lockfile
+          pnpm run build
+          sed -i 's|"baseUrl": ".*"|"baseUrl": ""|' dist/zfile.config.json
+
+      - name: Upload dist artifacts
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        uses: actions/upload-artifact@v4
+        with:
+          name: zfile-vue-pro-dist
+          path: dist/**
+
+  build-java-win-and-mac:
+    name: Build java on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    if: ${{ github.event.inputs.buildOnWinAndMac == 'true'}}
+    needs: build-front
     continue-on-error: true
     strategy:
       matrix:
@@ -24,60 +79,29 @@ jobs:
           - os: windows-latest
             artifact_name: zfile-pro.exe
             folder_name: zfile-pro-windows-amd64
-            compress_name: zfile-pro-windows-amd64.zip
+            compress_name: zfile-pro-release_windows_amd64.zip
             static: false
-
-          - os: ubuntu-latest
-            artifact_name: zfile-pro
-            folder_name: zfile-pro-linux-amd64
-            compress_name: zfile-pro-linux-amd64.tar.gz
-            static: false
-
+    
+         
     steps:
       - name: Checkout ZFile Pro
         uses: actions/checkout@v4
         with:
           repository: zfile-dev/zfile-pro
-          token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+          token: ${{ secrets.GH_PAT }}
           path: .
 
-      - name: Checkout ZFile Pro Vue
-        uses: actions/checkout@v4
-        if: ${{ github.event.inputs.buildStatic == 'true'}}
-        with:
-          repository: zfile-dev/zfile-vue-pro
-          token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
-          path: zfile-vue-pro
-
-      - name: Setup Node 18
-        if: ${{ github.event.inputs.buildStatic == 'true'}}
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Build ZFile Vue Pro
-        if: ${{ github.event.inputs.buildStatic == 'true'}}
-        run: |
-          cd zfile-vue-pro
-          npm install -g pnpm
-          node -v
-          pnpm -v
-          pnpm install --no-frozen-lockfile
-          pnpm run build
-
-      - name: Copy ZFile Vue Pro Static
-        if: ${{ github.event.inputs.buildStatic == 'true' && runner.os != 'Windows'}}
-        run: |
-          rm -rf src/main/resources/static
-          sed -i 's|"baseUrl": ".*"|"baseUrl": ""|' zfile-vue-pro/dist/zfile.config.json
-          cp -r zfile-vue-pro/dist src/main/resources/static
-
-      - name: Copy ZFile Vue Pro Static Windows
+      - name: Remove origin static files
         if: ${{ github.event.inputs.buildStatic == 'true' && runner.os == 'Windows'}}
         run: |
           Remove-Item -Recurse -Force src\main\resources\static
-          (Get-Content zfile-vue-pro\dist\zfile.config.json) -replace '"baseUrl": ".*"', '"baseUrl": ""' | Set-Content zfile-vue-pro\dist\zfile.config.json
-          Copy-Item -Recurse zfile-vue-pro\dist src\main\resources\static
+
+      - name: Download static dist artifacts
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        uses: actions/download-artifact@v4
+        with:
+          name: zfile-vue-pro-dist
+          path: src/main/resources/static/
 
       - uses: graalvm/setup-graalvm@v1
         with:
@@ -85,11 +109,16 @@ jobs:
           distribution: 'liberica'
           github-token: ${{ secrets.GITHUB_TOKEN }}
           native-image-job-reports: 'true'
-#          cache: 'maven'
+          #cache: 'maven'
+
+      - name: Set up Maven
+        uses: stCarolas/setup-maven@v5
+        if: ${{ runner.os == 'Windows'}}
+        with:
+          maven-version: 3.9.9
 
       - name: Cache local Maven repository
-        #        uses: useblacksmith/cache@v5
-        uses: actions/cache@v4
+        uses: 'actions/cache@v4'
         with:
           path: ~/.m2/repository
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
@@ -103,25 +132,114 @@ jobs:
           java --version
           native-image --version
 
-      - name: set static
-        if: ${{ runner.os == 'Linux' && matrix.static }}
-        run: |
-          echo " --static --libc=musl" >> src/main/resources/META-INF/native-image/native-image.properties
-
       - name: Example step using Maven plugin
         run: |
           mvn -Pnative package
 
-      - name: compress windows artifact
+      - name: Compress windows artifact
         if: runner.os == 'Windows'
         run: |
-          mkdir -p ${{ matrix.folder_name }}
-          mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
-          mv target/*.dll ${{ matrix.folder_name }}/
+          mkdir -p ${{ matrix.folder_name }}/zfile/
+          cp .package/script/*.bat ${{ matrix.folder_name }}/
+          cp .package/script/*.dll ${{ matrix.folder_name }}/zfile/
+          mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/zfile/
+          cp src/main/resources/application.properties ${{ matrix.folder_name }}/
+          mv target/*.dll ${{ matrix.folder_name }}/zfile/
           7z a -tzip ${{ matrix.compress_name }} ${{ matrix.folder_name }}
 
-      - name: Patch glibc for backwards compatibility
+      - name: Compress mac artifact
         if: runner.os != 'Windows'
+        run: |
+          mkdir -p ${{ matrix.folder_name }}/
+          mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/
+          cp src/main/resources/application.properties ${{ matrix.folder_name }}/
+          tar -czvf ${{ matrix.compress_name }} ${{ matrix.folder_name }}
+
+      - name: Upload Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ${{ matrix.compress_name }}
+          tag: ${{ github.run_id }}
+          overwrite: true
+          prerelease: true
+          body: |
+            **ZFile Pro 自动构建**
+
+  build-java-linux:
+    name: Build java on ${{ matrix.os }}
+    if: ${{ github.event.inputs.buildOnLinux == 'true'}}
+    runs-on: ${{ matrix.os }}
+    needs: build-front
+    continue-on-error: true
+    strategy:
+      matrix:
+        include:
+          - os: blacksmith-4vcpu-ubuntu-2204
+            artifact_name: zfile-pro
+            folder_name: zfile-pro-linux-amd64
+            compress_name: zfile-pro-release_linux_amd64.tar.gz
+            static: false
+
+          - os: blacksmith-8vcpu-ubuntu-2204-arm
+            artifact_name: zfile-pro
+            folder_name: zfile-pro-linux-arm64
+            compress_name: zfile-pro-release_linux_arm.tar.gz
+            static: false
+
+    steps:
+      - name: Checkout ZFile Pro
+        uses: actions/checkout@v4
+        with:
+          repository: zfile-dev/zfile-pro
+          token: ${{ secrets.GH_PAT }}
+          path: .
+
+      - name: Remove origin static files
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        run: |
+          rm -rf src/main/resources/static
+
+      - name: Download static dist artifacts
+        if: ${{ github.event.inputs.buildStatic == 'true'}}
+        uses: actions/download-artifact@v4
+        with:
+          name: zfile-vue-pro-dist
+          path: src/main/resources/static/
+
+      - uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '22'
+          distribution: 'liberica'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          native-image-job-reports: 'true'
+          #cache: 'maven'
+
+      - name: Cache local Maven repository
+        uses: useblacksmith/cache@v5
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Example step
+        run: |
+          echo "GRAALVM_HOME: $GRAALVM_HOME"
+          echo "JAVA_HOME: $JAVA_HOME"
+          java --version
+          native-image --version
+
+      - name: Set static build mode
+        if: ${{ matrix.static }}
+        run: |
+          echo " --static --libc=musl" >> src/main/resources/META-INF/native-image/native-image.properties
+
+      - name: Example step using maven plugin
+        run: |
+          mvn -Pnative package
+
+      - name: Patch glibc for backwards compatibility
         run: |
           sudo apt-get install ninja-build -y
           git clone https://github.com/corsix/polyfill-glibc.git
@@ -129,13 +247,15 @@ jobs:
           ninja polyfill-glibc
           ./polyfill-glibc --target-glibc=2.17  --print-imports ../target/${{ matrix.artifact_name }}
 
-      - name: compress linux artifact
-        if: runner.os != 'Windows'
+      - name: Compress linux artifact
         run: |
-          mkdir -p ${{ matrix.folder_name }}
-          mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/${{ matrix.artifact_name }}
-          if [ "${{ matrix.static }}" == "false" ]; then
-            mv target/*.so ${{ matrix.folder_name }}/
+          mkdir -p ${{ matrix.folder_name }}/bin/
+          mkdir -p ${{ matrix.folder_name }}/zfile/
+          cp .package/script/*.sh ${{ matrix.folder_name }}/bin/
+          mv target/${{ matrix.artifact_name }} ${{ matrix.folder_name }}/zfile/
+          cp src/main/resources/application.properties ${{ matrix.folder_name }}/
+          if [ "${{ matrix.static }}" == "false" ] && [ "$RUNNER_OS" != "macOS" ]; then
+            mv target/*.so ${{ matrix.folder_name }}/zfile/
           fi
           tar -czvf ${{ matrix.compress_name }} ${{ matrix.folder_name }}
 
@@ -149,3 +269,87 @@ jobs:
           prerelease: true
           body: |
             **ZFile Pro 自动构建**
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.folder_name }}
+          path: ${{ matrix.folder_name }}
+
+  build-docker:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.pushDocker == 'true'}}
+    needs: build-java-linux
+    env:
+      SECRET_REPO_PREFIX: REPO_
+      SECRET_USERNAME_PREFIX: USERNAME_
+      SECRET_PASSWORD_PREFIX: PASSWORD_
+    steps:
+      - name: Checkout ZFile Pro
+        uses: actions/checkout@v4
+        with:
+          repository: zfile-dev/zfile-pro
+          token: ${{ secrets.GH_PAT }} # `GH_PAT` is a secret that contains your PAT
+          path: .
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: zfile-artifacts
+          pattern: zfile-pro-*
+          merge-multiple: false
+
+      - name: Set up QEMU               # 设置 QEMU 环境，用来模拟操作系统，用来编译 arm64 镜像和 amd64 镜像
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: all
+
+      - name: Set up Docker Buildx      # 设置 Docker Buildx 环境
+        id: buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest
+
+      - name: Inspect builder           # 查看 builder 状态
+        run: |
+          echo "Name:      ${{ steps.buildx.outputs.name }}"
+          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
+          echo "Status:    ${{ steps.buildx.outputs.status }}"
+          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
+          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
+      - name: Login and Build Docker Image And Push
+        shell: bash
+        env:
+          ALL_SECRETS: ${{ toJSON(secrets) }}
+        run: |
+          repos=()
+          for key in $(echo $ALL_SECRETS | jq -r "keys[]"); do
+            if [[ $key == $SECRET_REPO_PREFIX* ]]; then
+              repo_key=$key
+              char=$(echo $repo_key | sed "s/$SECRET_REPO_PREFIX//")
+              username_key="${SECRET_USERNAME_PREFIX}${char}"
+              password_key="${SECRET_PASSWORD_PREFIX}${char}"
+
+              repo=$(echo $ALL_SECRETS | jq -r ".${repo_key}")
+              username=$(echo $ALL_SECRETS | jq -r ".${username_key}")
+              password=$(echo $ALL_SECRETS | jq -r ".${password_key}")
+              repos+=($repo)
+
+              # 如果 repo 只有一个 / ，则说明是 docker hub 的镜像，登录时后面不需要加 repo
+              if [[ $(echo $repo | grep -o '/' | wc -l) -eq 1 ]]; then
+                  echo $password | docker login -u $username --password-stdin
+              else
+                  echo $password | docker login -u $username --password-stdin $repo
+              fi
+            fi
+          done
+
+          command="docker buildx build --provenance=false --platform linux/amd64,linux/arm64 --push . "
+          for repo in ${repos[@]}; do
+              if [[ -n ${{ github.event.inputs.tag }} ]]; then
+                  command="$command -t $repo\:${{ github.event.inputs.tag }} "
+              else
+                  command="$command -t $repo\:latest -t $repo\:$(TZ=Asia/Shanghai date +%Y-%m-%d_%H-%M-%S)_$(git rev-parse --short HEAD)"
+              fi
+          done
+          eval $command
